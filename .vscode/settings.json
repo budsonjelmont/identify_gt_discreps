@@ -1,0 +1,5 @@
+{
+    "python.defaultInterpreterPath": "~/miniconda3/envs/identify_gt_discrep/bin/python",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 2
+}
