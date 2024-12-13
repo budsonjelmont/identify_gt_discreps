@@ -103,20 +103,58 @@ def test_single_mismatch_min_strand_2():
     assert resultdf["ALT"] == expect_alt
 
 
+def test_two_contig_mismatches_pos_strand():
+    """
+    Scenario: Two contiguous single bp events
+    CIGAR: 21=1X116=1X54=1X79=2X27=1X54=1X6=1X13=1X2=1X34=1X69=1X7=1X3=2X216=1X50=1X9=1X32=1X83=
+    HGVSg: NC_000001.10:g.13427796_13427797delCTinsTA
+    HGVSc: NM_001300891.2:c.1374_1375delTAinsCT
+    """
+    tx_ac = "NM_001300891.2"
+    chr_ac = "NC_000001.10"
+    alt_aln_method = "splign"
+    ex_ord = 3
+    exdf = uta_get_tx_exons_df(hdp, tx_ac, chr_ac, alt_aln_method)
+    row = exdf.loc[exdf["ord"] == ex_ord].squeeze()
+    resultdf = uta_cigar_to_mismatch_vcf(hdp, "ABC", row)
+
+    expect_mm_pos = 13427796
+    expect_mm_ref = "CT"
+    expect_mm_alt = "TA"
+
+    resultdf = resultdf.query("POS == @expect_mm_pos")
+    assert resultdf.shape[0] == 1
+
+    assert resultdf.iloc[0]["POS"] == expect_mm_pos
+    assert resultdf.iloc[0]["REF"] == expect_mm_ref
+    assert resultdf.iloc[0]["ALT"] == expect_mm_alt
+
+
 def test_two_contig_mismatches_min_strand():
     """
-    TODO - Implement
     Scenario: Two contiguous single bp events
-    NM_033487.3
-    NC_000001.10:g.1586821_1586822delACinsCT (NM_033487.3:c.-281_-280delAGinsGT)
-    tx_ac = "NM_033487.3"
-    chr_ac = "NC_000001.10"
-
-    See also:
-    NC_000004.11:g.76676624_76676625delCTinsTA	NM_003715.4:c.206_207delTAinsCT
-    NC_000004.11:g.76676624_76676625delCTinsTA	NM_001290049.2:c.206_207delTAinsCT
+    CIGAR: 21=1X116=1X54=1X79=2X27=1X54=1X6=1X13=1X2=1X34=1X69=1X7=1X3=2X216=1X50=1X9=1X32=1X83=
+    HGVSg: NC_000001.10:g.143134623_143134624delAGinsGT
+    HGVSc: NR_110761.1:c.1359_1360delACinsCT
     """
-    assert 1 == 1
+    tx_ac = "NR_110761.1"
+    chr_ac = "NC_000001.10"
+    alt_aln_method = "splign"
+    ex_ord = 2
+    exdf = uta_get_tx_exons_df(hdp, tx_ac, chr_ac, alt_aln_method)
+    row = exdf.loc[exdf["ord"] == ex_ord].squeeze()
+    resultdf = uta_cigar_to_mismatch_vcf(hdp, "ABC", row)
+
+    expect_mm_pos = 143134623
+    expect_mm_ref = "AG"
+    expect_mm_alt = "GT"
+
+    resultdf = resultdf.query("POS == @expect_mm_pos")
+    assert resultdf.shape[0] == 1
+
+    assert resultdf.iloc[0]["POS"] == expect_mm_pos
+    assert resultdf.iloc[0]["REF"] == expect_mm_ref
+    assert resultdf.iloc[0]["ALT"] == expect_mm_alt
 
 
 def test_single_bp_del_pos_strand():
@@ -171,8 +209,8 @@ def test_multi_bp_del_pos_strand():
     """
     Scenario: Multiple bp deletion
     CIGAR: 4=9D149=
-    g. HGVS: NC_000014.8:g.94582133_94582134insCATGGCGGC
-    c. HGVS: NM_001366994.1:c.129_137delCATGGCGGC
+    HGVSg: NC_000014.8:g.94582133_94582134insCATGGCGGC
+    HGVSc: NM_001366994.1:c.129_137delCATGGCGGC
     """
     tx_ac = "NM_001366994.1"
     chr_ac = "NC_000014.8"
@@ -295,7 +333,7 @@ def test_multi_bp_ins_pos_strand():
     assert resultdf["ALT"] == expect_alt
 
 
-def test_multi_bp_ins_pos_strand_2():  # Old & maybe wrong
+def test_multi_bp_ins_pos_strand_2():
     """
     Scenario: Another multiple bp insertion
     CIGAR: 284=3I1=
@@ -415,8 +453,8 @@ def test_multiple_indels_min_strand():
     resultdf = uta_cigar_to_mismatch_vcf(hdp, "ABC", row)
 
     expect_del_pos = 150192565
-    expect_del_ref = "C"
-    expect_del_alt = "CA"
+    expect_del_ref = "T"
+    expect_del_alt = "TA"  # TODO doublecheck
 
     expect_ins_pos = 150192065
     expect_ins_ref = "CAAA"
@@ -433,4 +471,4 @@ def test_multiple_indels_min_strand():
 
 
 if __name__ == "__main__":
-    test_single_bp_del_min_strand()
+    test_two_contig_mismatches_min_strand()

@@ -156,10 +156,10 @@ def uta_cigar_to_mismatch_vcf(hdp, id, row):
     tx_cursor_i = row["tx_start_i"]
     chr_cursor_i = row["alt_start_i"] if row["alt_strand"] == 1 else row["alt_end_i"]
     # Iterate through the alignment groups. For each group:
-    contiguous_mismatch = False
+    contiguous_delins = False
     for m in alngrps:
         if m["cigar_op"] == "=" or m["cigar_op"] == "M":
-            contiguous_mismatch = False
+            contiguous_delins = False
             tx_cursor_i += int(m["cigar_len"])
             chr_cursor_i += (
                 int(m["cigar_len"])
@@ -169,14 +169,13 @@ def uta_cigar_to_mismatch_vcf(hdp, id, row):
             continue
         else:
             # If the previous iteration was a mismatch, skip processing the rest of the exon because the VCF will be incorrect
-            if contiguous_mismatch:
+            if contiguous_delins:
                 print(
                     f"Can't derive VCF for exon {row["ord"]} (CIGAR {row['cigar']}) for tx {tx_ac}, chr {chr_ac}, alt_aln_method {alt_aln_method}"
                 )
                 break
-            else:
-                contiguous_mismatch = True
             if m["cigar_op"] == "X":
+                contiguous_delins = False
                 tx_cursor_i_new = tx_cursor_i + int(m["cigar_len"])
                 chr_cursor_i_new = chr_cursor_i + (
                     int(m["cigar_len"])
@@ -187,6 +186,7 @@ def uta_cigar_to_mismatch_vcf(hdp, id, row):
                 chr_anchor_offset = 0
                 chr_cursor_vcf_pos_3p_offset = 1
             elif m["cigar_op"] == "I":
+                contiguous_delins = True
                 tx_cursor_i_new = tx_cursor_i
                 chr_cursor_i_new = chr_cursor_i + (
                     int(m["cigar_len"])
@@ -197,6 +197,7 @@ def uta_cigar_to_mismatch_vcf(hdp, id, row):
                 chr_anchor_offset = 1
                 chr_cursor_vcf_pos_3p_offset = 0
             elif m["cigar_op"] == "D":
+                contiguous_delins = True
                 tx_cursor_i_new = tx_cursor_i + int(m["cigar_len"])
                 chr_cursor_i_new = chr_cursor_i
                 tx_anchor_offset = 1
