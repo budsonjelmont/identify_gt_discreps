@@ -331,123 +331,19 @@ def main():
                     ],
                     ignore_index=False,
                 )
-                # # Get all match groups
-                # alngrps = [
-                #     {
-                #         "cigar_str_start": m.start(),
-                #         "cigar_str_end": m.end(),
-                #         "cigar_len": m.group(1),
-                #         "cigar_op": m.group(2),
-                #     }
-                #     for m in re.finditer(r"([0-9]+)([A-Z=])", row["cigar"])
-                # ]
-                # tx_cursor_i = row["tx_start_i"]
-                # chr_cursor_i = (
-                #     row["alt_start_i"] if row["alt_strand"] == 1 else row["alt_end_i"]
-                # )
-                # # Iterate through the alignment groups. For each group:
-                # contiguous_mismatch = False
-                # for m in alngrps:
-                #     if m["cigar_op"] == "=" or m["cigar_op"] == "M":
-                #         contiguous_mismatch = False
-                #         tx_cursor_i += int(m["cigar_len"])
-                #         chr_cursor_i += (
-                #             int(m["cigar_len"])
-                #             if row["alt_strand"] == 1
-                #             else (-int(m["cigar_len"]))
-                #         )
-                #         continue
-                #     else:
-                #         # If the previous iteration was a mismatch, skip processing the rest of the exon because the VCF will be incorrect
-                #         if contiguous_mismatch:
-                #             print(
-                #                 f"Can't derive VCF for exon {row["ord"]} (CIGAR {row['cigar']}) for tx {tx_ac}, chr {chr_ac}, alt_aln_method {alt_aln_method}"
-                #             )
-                #             break
-                #         else:
-                #             contiguous_mismatch = True
-                #         if m["cigar_op"] == "X":
-                #             tx_cursor_i_new = tx_cursor_i + int(m["cigar_len"])
-                #             chr_cursor_i_new = chr_cursor_i + (
-                #                 int(m["cigar_len"])
-                #                 if row["alt_strand"] == 1
-                #                 else (-int(m["cigar_len"]))
-                #             )
-                #             tx_anchor_offset = 0
-                #             chr_anchor_offset = 0
-                #         elif m["cigar_op"] == "D":
-                #             tx_cursor_i_new = tx_cursor_i
-                #             chr_cursor_i_new = chr_cursor_i + (
-                #                 int(m["cigar_len"])
-                #                 if row["alt_strand"] == 1
-                #                 else (-int(m["cigar_len"]))
-                #             )
-                #             tx_anchor_offset = 1
-                #             chr_anchor_offset = 1
-                #         elif m["cigar_op"] == "I":
-                #             tx_cursor_i_new = tx_cursor_i + int(m["cigar_len"])
-                #             chr_cursor_i_new = chr_cursor_i
-                #             tx_anchor_offset = 1
-                #             chr_anchor_offset = 1
-                #         else:
-                #             raise ValueError(
-                #                 f"Unexpected CIGAR operation: {m['cigar_op']} for tx {tx_ac}, chr {chr_ac}, alt_aln_method {alt_aln_method}"
-                #             )
-                #         tx_mm_seq = (
-                #             hdp.get_seq(
-                #                 tx_ac, tx_cursor_i - tx_anchor_offset, tx_cursor_i_new
-                #             )
-                #             if row["alt_strand"] == 1
-                #             else hdp.get_seq(
-                #                 tx_ac, tx_cursor_i, tx_cursor_i_new + tx_anchor_offset
-                #             )
-                #         )
-                #         chr_mm_seq = (
-                #             hdp.get_seq(
-                #                 chr_ac,
-                #                 chr_cursor_i - chr_anchor_offset,
-                #                 chr_cursor_i_new,
-                #             )
-                #             if row["alt_strand"] == 1
-                #             else hdp.get_seq(
-                #                 chr_ac,
-                #                 chr_cursor_i_new - chr_anchor_offset,
-                #                 chr_cursor_i,
-                #             )
-                #         )
-                #         tx_pos = tx_cursor_i
-                #         vcf_pos = (
-                #             chr_cursor_i_new - chr_anchor_offset
-                #             if row["alt_strand"] == 1
-                #             else chr_cursor_i - chr_anchor_offset
-                #         )
-                #         vcf_ref = chr_mm_seq
-                #         vcf_alt = str(
-                #             tx_mm_seq
-                #             if row["alt_strand"] == 1
-                #             else Seq(tx_mm_seq).reverse_complement()
-                #         )
-                #         mismatch = pd.DataFrame(
-                #             {
-                #                 "#CHROM": chr_ac,
-                #                 "POS": vcf_pos,
-                #                 "ID": f"{chr_ac}|{vcf_pos}{vcf_ref}>{vcf_alt}|{tx_ac}|{alt_aln_method}",
-                #                 "REF": vcf_ref,
-                #                 "ALT": vcf_alt,
-                #                 "INFO": f"tx_ac={tx_ac};cigar='{row["cigar"]}';alt_aln_method={alt_aln_method};uta_tx_exon_id={row['tx_exon_id']};uta_alt_exon_id={row['alt_exon_id']};uta_tx_start_i={row['tx_start_i']};uta_tx_end_i={row['tx_end_i']};tx_pos={tx_pos};uta_alt_start_i={row['alt_start_i']};uta_alt_end_i={row['alt_end_i']}",
-                #             },
-                #             index=[id],
-                #         )
-                #         mm = pd.concat(
-                #             [
-                #                 mm,
-                #                 mismatch,
-                #             ],
-                #         )
-                #     # Advance the cursor for the next iteration
-                #     tx_cursor_i = tx_cursor_i_new
-                #     chr_cursor_i = chr_cursor_i_new
     if not mm.empty:
+        # Get the unique 0-based exon ordinal numbers for each mismatch in this transcript as ';'-delimited string
+        txlist["mismatch_exons"] = (
+            mm.groupby(mm.index)["INFO"]
+            .agg("|".join)
+            .str.extractall("uta_tx_exon_ord=([0-9]+);")
+            .reset_index(level=0, names=["id"])
+            .drop_duplicates(["id", 0])
+            .sort_values(["id", 0])
+            .groupby("id")
+            .agg(";".join)
+        )
+        # Get the unique mismatch IDs for each mismatch in this transcript as ';'-delimited string
         txlist["mismatches"] = mm.groupby(mm.index)["ID"].agg(";".join)
     # Write output
     mm.to_csv(outvcf, sep="\t", index=False)
