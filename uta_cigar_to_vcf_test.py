@@ -438,7 +438,6 @@ def test_two_noncontig_single_bp_events():
 
 def test_multiple_indels_min_strand():
     """
-    TODO - Implement
     Scenario: Multiple indels
     CIGAR: 498=1D37=3I1809=
     HGVSg: NC_000001.10:g.150192526_150192528delAAA and NC_000001.10:g.150192565_150192566insA
@@ -454,11 +453,11 @@ def test_multiple_indels_min_strand():
 
     expect_del_pos = 150192565
     expect_del_ref = "T"
-    expect_del_alt = "TA"  # TODO doublecheck
+    expect_del_alt = "TA"
 
-    expect_ins_pos = 150192065
-    expect_ins_ref = "CAAA"
-    expect_ins_alt = "C"
+    expect_ins_pos = 150192525
+    expect_ins_ref = "AAAA"
+    expect_ins_alt = "A"
 
     assert resultdf.shape[0] == 2
     assert resultdf.iloc[0]["POS"] == expect_del_pos
@@ -471,4 +470,4 @@ def test_multiple_indels_min_strand():
 
 
 if __name__ == "__main__":
-    test_two_contig_mismatches_min_strand()
+    test_multiple_indels_min_strand()
